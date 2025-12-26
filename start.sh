@@ -4,10 +4,11 @@
 echo "正在启动系统监控Web应用..."
 
 # 激活conda环境
-source /home/bi9bjv/miniconda3/bin/activate cpuweb
+source /home/bi9bjv/miniconda3/etc/profile.d/conda.sh
+conda activate cpuweb
 
 # 切换到项目目录
-cd /home/bi9bjv/cpuweb
+cd /home/bi9bjv/python/cpuweb
 
 # 启动应用
 echo "启动系统监控服务，访问地址: http://$(hostname -I | awk '{print $1}'):9001"
