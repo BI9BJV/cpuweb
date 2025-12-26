@@ -1,0 +1,18 @@
+[Unit]
+Description=CPUWeb System Monitor Service
+After=network.target
+
+[Service]
+Type=simple
+User=bi9bjv
+WorkingDirectory=/home/bi9bjv/cpuweb
+Environment="PATH=/home/bi9bjv/miniconda3/envs/cpuweb/bin:/home/bi9bjv/miniconda3/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+ExecStart=/home/bi9bjv/miniconda3/envs/cpuweb/bin/python /home/bi9bjv/cpuweb/app.py
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=cpuweb
+
+[Install]
+WantedBy=multi-user.target
