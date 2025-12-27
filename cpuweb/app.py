@@ -45,7 +45,7 @@ fan_control = {
     'last_control_time': time.time(),  # 上次控制时间
     'next_switch_time': None,  # 下次开关时间
     'running_duration': 300,  # 连续运行时间（秒）5分钟
-    'stop_duration': 120,     # 停止时间（秒）2分钟
+    'stop_duration': 300,     # 停止时间（秒）5分钟
     'current_state_start': time.time(),  # 当前状态开始时间
     'current_cycle_remaining': 0,  # 当前周期剩余时间
     'is_running': False  # 风扇当前是否运行
