@@ -1,0 +1,1211 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文件管理器</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Courier New', 'Consolas', 'VT323', monospace;
+            background: #000000;
+            min-height: 100vh;
+            padding: 10px;
+            color: #00ffff;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* CRT屏幕效果 */
+        body::before {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            right: 0;
+            background: linear-gradient(
+                rgba(18, 16, 16, 0) 50%,
+                rgba(0, 0, 0, 0.25) 50%
+            );
+            background-size: 100% 4px;
+            z-index: 2;
+            pointer-events: none;
+        }
+
+        /* CRT荧光效果 */
+        body::after {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            right: 0;
+            background: rgba(18, 16, 16, 0.1);
+            opacity: 0;
+            z-index: 2;
+            pointer-events: none;
+            animation: flicker 0.15s infinite;
+        }
+
+        @keyframes flicker {
+            0% { opacity: 0.027906; }
+            5% { opacity: 0.048532; }
+            10% { opacity: 0.032642; }
+            15% { opacity: 0.022874; }
+            20% { opacity: 0.035263; }
+            25% { opacity: 0.038943; }
+            30% { opacity: 0.042762; }
+            35% { opacity: 0.029821; }
+            40% { opacity: 0.047685; }
+            45% { opacity: 0.036628; }
+            50% { opacity: 0.044725; }
+            55% { opacity: 0.041531; }
+            60% { opacity: 0.049376; }
+            65% { opacity: 0.039876; }
+            70% { opacity: 0.045823; }
+            75% { opacity: 0.041847; }
+            80% { opacity: 0.048532; }
+            85% { opacity: 0.032642; }
+            90% { opacity: 0.022874; }
+            95% { opacity: 0.035263; }
+            100% { opacity: 0.038943; }
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: #000000;
+            border: 1px solid #00ffff;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
+            overflow: hidden;
+            position: relative;
+            z-index: 1;
+        }
+
+        .header {
+            background: #000000;
+            color: #00ffff;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            border-bottom: 1px solid #00ffff;
+            text-shadow: 0 0 5px #00ffff;
+        }
+
+        .header h1 {
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            text-shadow: 0 0 10px #00ffff;
+        }
+
+        .nav-menu {
+            margin-top: 10px;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .nav-btn {
+            display: inline-block;
+            padding: 6px 12px;
+            background: #000000;
+            color: #00ffff;
+            text-decoration: none;
+            border: 1px solid #00ffff;
+            font-weight: bold;
+            font-family: 'Courier New', monospace;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            text-shadow: 0 0 5px #00ffff;
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .nav-btn:hover {
+            background: #00ffff;
+            color: #000000;
+            text-shadow: none;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.8);
+        }
+
+        .nav-btn.active {
+            background: #00ffff;
+            color: #000000;
+            text-shadow: none;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.8);
+        }
+
+        .toolbar {
+            padding: 10px 15px;
+            background: #000000;
+            border-bottom: 1px solid #00ffff;
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .breadcrumb {
+            padding: 8px 15px;
+            background: #000000;
+            border-bottom: 1px solid rgba(0, 255, 255, 0.3);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+        }
+
+        .breadcrumb-item {
+            color: #00ffff;
+            cursor: pointer;
+            text-decoration: none;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            text-shadow: 0 0 3px #00ffff;
+        }
+
+        .breadcrumb-item:hover {
+            text-decoration: underline;
+            text-shadow: 0 0 10px #00ffff;
+        }
+
+        .file-list {
+            height: calc(100vh - 300px);
+            overflow-y: auto;
+            background: #000000;
+        }
+
+        .file-item {
+            display: flex;
+            align-items: center;
+            padding: 8px 15px;
+            border-bottom: 1px solid rgba(0, 255, 255, 0.2);
+            cursor: pointer;
+            color: #00ffff;
+        }
+
+        .file-item:hover {
+            background: rgba(0, 255, 255, 0.2);
+            color: #ffffff;
+            text-shadow: 0 0 5px #00ffff;
+        }
+
+        .file-item.selected {
+            background: rgba(0, 255, 255, 0.3);
+            color: #ffffff;
+            text-shadow: 0 0 10px #00ffff;
+        }
+
+        .file-icon {
+            font-size: 18px;
+            margin-right: 10px;
+            width: 25px;
+            text-align: center;
+        }
+
+        .file-info {
+            flex: 1;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .file-name {
+            font-weight: bold;
+            color: #00ffff;
+            text-shadow: 0 0 3px #00ffff;
+        }
+
+        .file-item:hover .file-name,
+        .file-item.selected .file-name {
+            color: #ffffff;
+            text-shadow: 0 0 10px #00ffff;
+        }
+
+        .file-details {
+            display: flex;
+            gap: 15px;
+            font-size: 12px;
+            color: #00ffff;
+            text-shadow: 0 0 3px #00ffff;
+        }
+
+        .file-item:hover .file-details,
+        .file-item.selected .file-details {
+            color: #ffffff;
+        }
+
+        .btn {
+            padding: 6px 12px;
+            border: 1px solid #00ffff;
+            background: #000000;
+            color: #00ffff;
+            cursor: pointer;
+            font-size: 13px;
+            font-family: 'Courier New', monospace;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            text-shadow: 0 0 5px #00ffff;
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .btn:hover {
+            background: #00ffff;
+            color: #000000;
+            text-shadow: none;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.8);
+        }
+
+        .btn-primary {
+            background: #000000;
+            color: #00ffff;
+        }
+
+        .btn-success {
+            background: #000000;
+            color: #00ff00;
+            border-color: #00ff00;
+            text-shadow: 0 0 5px #00ff00;
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
+        }
+
+        .btn-success:hover {
+            background: #00ff00;
+            color: #000000;
+            text-shadow: none;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.8);
+        }
+
+        .btn-danger {
+            background: #000000;
+            color: #ff0000;
+            border-color: #ff0000;
+            text-shadow: 0 0 5px #ff0000;
+            box-shadow: 0 0 10px rgba(255, 0, 0, 0.3);
+        }
+
+        .btn-danger:hover {
+            background: #ff0000;
+            color: #000000;
+            text-shadow: none;
+            box-shadow: 0 0 20px rgba(255, 0, 0, 0.8);
+        }
+
+        .btn-warning {
+            background: #000000;
+            color: #ffff00;
+            border-color: #ffff00;
+            text-shadow: 0 0 5px #ffff00;
+            box-shadow: 0 0 10px rgba(255, 255, 0, 0.3);
+        }
+
+        .btn-warning:hover {
+            background: #ffff00;
+            color: #000000;
+            text-shadow: none;
+            box-shadow: 0 0 20px rgba(255, 255, 0, 0.8);
+        }
+
+        .btn-info {
+            background: #000000;
+            color: #87ceeb;
+            border: 1px solid #87ceeb;
+            font-family: 'Courier New', monospace;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            padding: 6px 12px;
+            text-shadow: 0 0 5px #87ceeb;
+            box-shadow: 0 0 10px rgba(135, 206, 235, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .btn-info:hover {
+            background: #87ceeb;
+            color: #000000;
+            text-shadow: none;
+            box-shadow: 0 0 20px rgba(135, 206, 235, 0.8);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 1000;
+        }
+
+        .modal-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #000000;
+            padding: 15px;
+            border: 1px solid #00ffff;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
+            min-width: 300px;
+            color: #00ffff;
+        }
+
+        .modal-header h3 {
+            color: #00ffff;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+            text-shadow: 0 0 5px #00ffff;
+        }
+
+        .modal-body {
+            margin-bottom: 15px;
+        }
+
+        .modal-footer {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #00ffff;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            text-shadow: 0 0 3px #00ffff;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #00ffff;
+            background: #000000;
+            color: #00ffff;
+            font-size: 14px;
+            font-family: 'Courier New', monospace;
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+        }
+
+        .form-control:focus {
+            outline: none;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.6);
+        }
+
+        .upload-area {
+            border: 1px solid #00ffff;
+            padding: 30px;
+            text-align: center;
+            background: #000000;
+            color: #00ffff;
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+        }
+
+        .upload-area.dragover {
+            background: rgba(0, 255, 255, 0.2);
+            color: #ffffff;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.6);
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border: 1px solid #00ffff;
+            color: #00ffff;
+            font-weight: bold;
+            font-family: 'Courier New', monospace;
+            text-transform: uppercase;
+            z-index: 1001;
+            max-width: 300px;
+            background: #000000;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
+            text-shadow: 0 0 5px #00ffff;
+            animation: slideIn 0.3s ease;
+        }
+
+        .notification.success {
+            border-color: #00ff00;
+            color: #00ff00;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.5);
+            text-shadow: 0 0 5px #00ff00;
+        }
+
+        .notification.error {
+            border-color: #ff0000;
+            color: #ff0000;
+            box-shadow: 0 0 20px rgba(255, 0, 0, 0.5);
+            text-shadow: 0 0 5px #ff0000;
+        }
+
+        .notification.info {
+            border-color: #00ffff;
+            color: #00ffff;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .stats {
+            padding: 8px 15px;
+            background: #000000;
+            border-top: 1px solid #00ffff;
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            color: #00ffff;
+            text-shadow: 0 0 3px #00ffff;
+        }
+
+        .stats strong {
+            color: #ffffff;
+            text-shadow: 0 0 5px #00ffff;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📁 文件管理器</h1>
+            <div class="nav-menu">
+                <a href="/" class="nav-btn">🖥️ 系统监控</a>
+                <a href="/webssh" class="nav-btn">🔐 SSH终端</a>
+                <a href="/filemanager" class="nav-btn active">📁 文件管理</a>
+            </div>
+        </div>
+        
+        <div class="toolbar">
+            <button class="btn btn-primary" onclick="goBack()">⬅️ 返回</button>
+            <button class="btn btn-success" onclick="showCreateDirModal()">📁 新建文件夹</button>
+            <button class="btn btn-primary" onclick="showUploadModal()">📤 上传文件</button>
+            <button class="btn btn-warning" onclick="renameSelected()" id="renameBtn" disabled>✏️ 重命名</button>
+            <button class="btn btn-danger" onclick="deleteSelected()" id="deleteBtn" disabled>🗑️ 删除</button>
+            <button class="btn btn-primary" onclick="downloadSelected()" id="downloadBtn" disabled>📥 下载</button>
+            <button class="btn btn-info" onclick="previewSelected()" id="previewBtn" disabled>🔍 预览</button>
+            <button class="btn btn-success" onclick="editSelected()" id="editBtn" disabled>✍️ 编辑</button>
+            <button class="btn btn-warning" onclick="refreshCurrent()">🔄 刷新</button>
+        </div>
+        
+        <div class="breadcrumb" id="breadcrumb">
+            <span class="breadcrumb-item" onclick="navigateTo('')">根目录</span>
+        </div>
+        
+        <div class="file-list" id="fileList">
+            <div style="text-align: center; padding: 50px; color: #666;">
+                加载中...
+            </div>
+        </div>
+        
+        <div class="stats" id="stats">
+            <span>文件数量: <strong id="fileCount">0</strong></span>
+            <span>当前路径: <strong id="currentPath">/</strong></span>
+        </div>
+    </div>
+    
+    <!-- 新建文件夹模态框 -->
+    <div class="modal" id="createDirModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>新建文件夹</h3>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>文件夹名称:</label>
+                    <input type="text" class="form-control" id="newDirName" placeholder="输入文件夹名称">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="createDirectory()">创建</button>
+                <button class="btn btn-secondary" onclick="closeModal('createDirModal')">取消</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 上传文件模态框 -->
+    <div class="modal" id="uploadModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>上传文件</h3>
+            </div>
+            <div class="modal-body">
+                <div class="upload-area" id="uploadArea">
+                    <p>📁 拖拽文件到此处或点击选择文件</p>
+                    <input type="file" id="fileInput" multiple style="display: none;">
+                </div>
+                <div id="uploadProgress" style="margin-top: 15px; display: none;">
+                    <div style="background: #f0f0f0; border-radius: 4px; overflow: hidden;">
+                        <div id="progressBar" style="background: #007bff; height: 20px; width: 0%; transition: width 0.3s;"></div>
+                    </div>
+                    <p id="progressText" style="text-align: center; margin-top: 5px;">0%</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('uploadModal')">取消</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 重命名模态框 -->
+    <div class="modal" id="renameModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>重命名</h3>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>新名称:</label>
+                    <input type="text" class="form-control" id="newName" placeholder="输入新名称">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="renameItem()">确定</button>
+                <button class="btn btn-secondary" onclick="closeModal('renameModal')">取消</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 查看文件内容模态框 -->
+    <div class="modal" id="viewFileModal">
+        <div class="modal-content" style="width: 80%; max-width: 900px;">
+            <div class="modal-header">
+                <h3 id="viewFileTitle">查看文件内容</h3>
+            </div>
+            <div class="modal-body">
+                <pre id="fileContent" style="background: #000000; color: #00ffff; padding: 10px; border: 1px solid #00ffff; max-height: 500px; overflow: auto; font-family: 'Courier New', monospace; white-space: pre-wrap; word-wrap: break-word; text-shadow: 0 0 3px #00ffff;"></pre>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('viewFileModal')">关闭</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let currentPath = '';
+        let selectedItems = new Set();
+        
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.style.opacity = '0';
+                setTimeout(() => {
+                    document.body.removeChild(notification);
+                }, 300);
+            }, 3000);
+        }
+        
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+        
+        function getFileIcon(type, name) {
+            if (type === 'directory') return '📁';
+            
+            const ext = name.split('.').pop().toLowerCase();
+            const iconMap = {
+                'txt': '📄',
+                'pdf': '📕',
+                'doc': '📘',
+                'docx': '📘',
+                'xls': '📗',
+                'xlsx': '📗',
+                'ppt': '📙',
+                'pptx': '📙',
+                'jpg': '🖼️',
+                'jpeg': '🖼️',
+                'png': '🖼️',
+                'gif': '🖼️',
+                'mp3': '🎵',
+                'mp4': '🎬',
+                'zip': '📦',
+                'rar': '📦',
+                'py': '🐍',
+                'js': '📜',
+                'html': '🌐',
+                'css': '🎨',
+                'json': '📋',
+                'xml': '📄',
+                'sql': '🗃️'
+            };
+            
+            return iconMap[ext] || '📄';
+        }
+        
+        async function loadDirectory(path) {
+            try {
+                const response = await fetch(`/api/files/list?path=${encodeURIComponent(path)}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    currentPath = data.current_path;
+                    renderFileList(data.items);
+                    updateBreadcrumb(path);
+                    updateStats();
+                } else {
+                    showNotification(data.message || '加载目录失败', 'error');
+                }
+            } catch (error) {
+                showNotification('加载目录失败: ' + error.message, 'error');
+            }
+        }
+        
+        function renderFileList(items) {
+            const fileList = document.getElementById('fileList');
+            
+            if (items.length === 0) {
+                fileList.innerHTML = '<div style="text-align: center; padding: 50px; color: #666;">此目录为空</div>';
+                return;
+            }
+            
+            let html = '';
+            items.forEach(item => {
+                html += `
+                    <div class="file-item" data-path="${item.path}" data-type="${item.type}" onclick="selectItem(this)">
+                        <div class="file-icon">${getFileIcon(item.type, item.name)}</div>
+                        <div class="file-info">
+                            <div class="file-name">${item.name}</div>
+                            <div class="file-details">
+                                <span>${item.type === 'directory' ? '文件夹' : formatFileSize(item.size)}</span>
+                                <span>${item.modified}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            fileList.innerHTML = html;
+        }
+        
+        function updateBreadcrumb(path) {
+            const breadcrumb = document.getElementById('breadcrumb');
+            const parts = path ? path.split('/') : [];
+            
+            let html = '<span class="breadcrumb-item" onclick="navigateTo(\'\')">根目录</span>';
+            
+            let currentPath = '';
+            for (let i = 0; i < parts.length; i++) {
+                currentPath += (i > 0 ? '/' : '') + parts[i];
+                html += ` <span>></span> <span class="breadcrumb-item" onclick="navigateTo('${currentPath}')">${parts[i]}</span>`;
+            }
+            
+            breadcrumb.innerHTML = html;
+            document.getElementById('currentPath').textContent = '/' + (path || '');
+        }
+        
+        async function updateStats() {
+            try {
+                const response = await fetch(`/api/files/stats?path=${encodeURIComponent(currentPath)}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    document.getElementById('fileCount').textContent = data.file_count;
+                }
+            } catch (error) {
+                console.error('获取统计信息失败:', error);
+            }
+        }
+        
+        function selectItem(element) {
+            const path = element.dataset.path;
+            const type = element.dataset.type;
+            
+            if (type === 'directory') {
+                navigateTo(path);
+            } else {
+                // 单选文件
+                document.querySelectorAll('.file-item').forEach(item => {
+                    item.classList.remove('selected');
+                });
+                element.classList.add('selected');
+                
+                selectedItems.clear();
+                selectedItems.add(path);
+                
+                updateToolbarButtons();
+                
+                // 检查是否为可预览的文本文件
+                const fileName = path.split('/').pop().toLowerCase();
+                const ext = fileName.split('.').pop();
+                const textExtensions = ['txt', 'py', 'js', 'html', 'css', 'json', 'xml', 'md', 'csv', 'log', 'ini', 'cfg', 'yml', 'yaml'];
+                
+                if (textExtensions.includes(ext)) {
+                    // 对于文本文件，提供预览选项
+                    if (event.ctrlKey || event.metaKey) { // Ctrl+点击预览
+                        viewFileContent(path);
+                    }
+                }
+            }
+        }
+        
+        function updateToolbarButtons() {
+            const hasSelection = selectedItems.size > 0;
+            const singleSelection = selectedItems.size === 1;
+            
+            document.getElementById('renameBtn').disabled = !singleSelection;
+            document.getElementById('deleteBtn').disabled = !hasSelection;
+            document.getElementById('downloadBtn').disabled = !singleSelection;
+            
+            // 检查选中的是否为可预览/可编辑的文本文件
+            if (singleSelection) {
+                const path = Array.from(selectedItems)[0];
+                const fileName = path.split('/').pop().toLowerCase();
+                const ext = fileName.split('.').pop();
+                const textExtensions = ['txt', 'py', 'js', 'html', 'css', 'json', 'xml', 'md', 'csv', 'log', 'ini', 'cfg', 'yml', 'yaml'];
+                
+                const isTextFile = textExtensions.includes(ext);
+                document.getElementById('previewBtn').disabled = !isTextFile;
+                
+                // 添加编辑按钮的逻辑
+                const editBtn = document.getElementById('editBtn');
+                if (editBtn) {
+                    editBtn.disabled = !isTextFile;
+                }
+            } else {
+                document.getElementById('previewBtn').disabled = true;
+                
+                // 添加编辑按钮的逻辑
+                const editBtn = document.getElementById('editBtn');
+                if (editBtn) {
+                    editBtn.disabled = true;
+                }
+            }
+        }
+        
+        function previewSelected() {
+            if (selectedItems.size !== 1) return;
+            
+            const path = Array.from(selectedItems)[0];
+            const fileName = path.split('/').pop().toLowerCase();
+            const ext = fileName.split('.').pop();
+            const textExtensions = ['txt', 'py', 'js', 'html', 'css', 'json', 'xml', 'md', 'csv', 'log', 'ini', 'cfg', 'yml', 'yaml'];
+            
+            if (textExtensions.includes(ext)) {
+                viewFileContent(path);
+            } else {
+                showNotification('该文件类型无法预览', 'error');
+            }
+        }
+        
+        function editSelected() {
+            if (selectedItems.size !== 1) return;
+            
+            const path = Array.from(selectedItems)[0];
+            const fileName = path.split('/').pop().toLowerCase();
+            const ext = fileName.split('.').pop();
+            const textExtensions = ['txt', 'py', 'js', 'html', 'css', 'json', 'xml', 'md', 'csv', 'log', 'ini', 'cfg', 'yml', 'yaml'];
+            
+            if (textExtensions.includes(ext)) {
+                editFileContent(path);
+            } else {
+                showNotification('该文件类型无法编辑', 'error');
+            }
+        }
+        
+        function navigateTo(path) {
+            selectedItems.clear();
+            updateToolbarButtons();
+            loadDirectory(path);
+        }
+        
+        function goBack() {
+            if (currentPath) {
+                const parentPath = currentPath.split('/').slice(0, -1).join('/');
+                navigateTo(parentPath);
+            }
+        }
+        
+        function refreshCurrent() {
+            loadDirectory(currentPath);
+        }
+        
+        function showCreateDirModal() {
+            document.getElementById('createDirModal').style.display = 'block';
+            document.getElementById('newDirName').value = '';
+            document.getElementById('newDirName').focus();
+        }
+        
+        function showUploadModal() {
+            document.getElementById('uploadModal').style.display = 'block';
+        }
+        
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+        
+        async function createDirectory() {
+            const name = document.getElementById('newDirName').value.trim();
+            if (!name) {
+                showNotification('请输入文件夹名称', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/files/create_dir', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        path: currentPath,
+                        name: name
+                    })
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    showNotification('文件夹创建成功', 'success');
+                    closeModal('createDirModal');
+                    refreshCurrent();
+                } else {
+                    showNotification(data.message || '创建失败', 'error');
+                }
+            } catch (error) {
+                showNotification('创建失败: ' + error.message, 'error');
+            }
+        }
+        
+        function renameSelected() {
+            if (selectedItems.size !== 1) return;
+            
+            const path = Array.from(selectedItems)[0];
+            const name = path.split('/').pop();
+            
+            document.getElementById('newName').value = name;
+            document.getElementById('renameModal').style.display = 'block';
+        }
+        
+        async function renameItem() {
+            const newName = document.getElementById('newName').value.trim();
+            if (!newName) {
+                showNotification('请输入新名称', 'error');
+                return;
+            }
+            
+            const path = Array.from(selectedItems)[0];
+            
+            try {
+                const response = await fetch('/api/files/rename', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        path: path,
+                        new_name: newName
+                    })
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    showNotification('重命名成功', 'success');
+                    closeModal('renameModal');
+                    refreshCurrent();
+                } else {
+                    showNotification(data.message || '重命名失败', 'error');
+                }
+            } catch (error) {
+                showNotification('重命名失败: ' + error.message, 'error');
+            }
+        }
+        
+        function deleteSelected() {
+            if (selectedItems.size === 0) return;
+            
+            if (!confirm('确定要删除选中的项目吗？此操作不可撤销！')) {
+                return;
+            }
+            
+            const promises = [];
+            for (const path of selectedItems) {
+                promises.push(
+                    fetch('/api/files/delete', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            path: path
+                        })
+                    })
+                );
+            }
+            
+            Promise.all(promises)
+                .then(responses => Promise.all(responses.map(r => r.json())))
+                .then(results => {
+                    const hasError = results.some(result => !result.success);
+                    if (hasError) {
+                        showNotification('部分项目删除失败', 'error');
+                    } else {
+                        showNotification('删除成功', 'success');
+                        refreshCurrent();
+                    }
+                })
+                .catch(error => {
+                    showNotification('删除失败: ' + error.message, 'error');
+                });
+        }
+        
+        function downloadSelected() {
+            if (selectedItems.size !== 1) return;
+            
+            const path = Array.from(selectedItems)[0];
+            window.open(`/api/files/download?path=${encodeURIComponent(path)}`, '_blank');
+        }
+        
+        // 查看文件内容
+        async function viewFileContent(path) {
+            try {
+                const response = await fetch(`/api/files/read?path=${encodeURIComponent(path)}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    document.getElementById('viewFileTitle').textContent = `查看文件内容 - ${path.split('/').pop()} (${data.size})`;
+                    document.getElementById('fileContent').textContent = data.content;
+                    document.getElementById('viewFileModal').style.display = 'block';
+                } else {
+                    showNotification(data.message || '读取文件内容失败', 'error');
+                }
+            } catch (error) {
+                showNotification('读取文件内容失败: ' + error.message, 'error');
+            }
+        }
+        
+        // 编辑文件内容
+        function editFileContent(path) {
+            // 首先获取文件内容
+            fetch(`/api/files/read?path=${encodeURIComponent(path)}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // 创建编辑模态框
+                        showEditModal(path, data.content);
+                    } else {
+                        showNotification(data.message || '无法编辑文件', 'error');
+                    }
+                })
+                .catch(error => {
+                    showNotification('获取文件内容失败: ' + error.message, 'error');
+                });
+        }
+        
+        // 显示编辑模态框
+        function showEditModal(path, content) {
+            // 创建或更新编辑模态框
+            let editModal = document.getElementById('editFileModal');
+            if (!editModal) {
+                // 创建编辑模态框HTML
+                const modalHTML = `
+                    <div class="modal" id="editFileModal">
+                        <div class="modal-content" style="width: 90%; max-width: 1000px; height: 80vh; display: flex; flex-direction: column;">
+                            <div class="modal-header">
+                                <h3 id="editFileTitle">编辑文件</h3>
+                            </div>
+                            <div class="modal-body" style="flex: 1; display: flex; flex-direction: column;">
+                                <textarea id="editFileContent" style="width: 100%; height: 100%; background: #000000; color: #00ffff; padding: 10px; border: 1px solid #00ffff; font-family: 'Courier New', monospace; resize: none; font-size: 14px; line-height: 1.4; text-shadow: 0 0 3px #00ffff;"></textarea>
+                            </div>
+                            <div class="modal-footer">
+                                <button class="btn btn-success" onclick="saveFileContent()">💾 保存</button>
+                                <button class="btn btn-secondary" onclick="closeModal('editFileModal')">取消</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                document.body.insertAdjacentHTML('beforeend', modalHTML);
+                editModal = document.getElementById('editFileModal');
+            }
+            
+            // 设置文件路径和内容
+            document.getElementById('editFileContent').value = content;
+            document.getElementById('editFileTitle').textContent = `编辑: ${path.split('/').pop()}`;
+            window.currentEditFilePath = path;  // 保存当前编辑的文件路径
+            
+            // 显示模态框
+            editModal.style.display = 'block';
+        }
+        
+        // 保存文件内容
+        async function saveFileContent() {
+            const content = document.getElementById('editFileContent').value;
+            const path = window.currentEditFilePath;
+            
+            if (!path) {
+                showNotification('没有指定文件路径', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/files/write', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        path: path,
+                        content: content,
+                        overwrite: true
+                    })
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    showNotification('文件保存成功', 'success');
+                    closeModal('editFileModal');
+                    // 如果当前查看的文件就是刚保存的文件，则刷新预览
+                    if (document.getElementById('viewFileModal').style.display === 'block') {
+                        viewFileContent(path);
+                    }
+                } else {
+                    showNotification(data.message || '保存失败', 'error');
+                }
+            } catch (error) {
+                showNotification('保存失败: ' + error.message, 'error');
+            }
+        }
+        
+        // 初始化页面
+        document.addEventListener('DOMContentLoaded', function() {
+            loadDirectory('');
+            
+            // 上传功能
+            const uploadArea = document.getElementById('uploadArea');
+            const fileInput = document.getElementById('fileInput');
+            
+            uploadArea.addEventListener('click', () => {
+                fileInput.click();
+            });
+            
+            fileInput.addEventListener('change', handleFileUpload);
+            
+            // 拖拽上传
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadArea.classList.add('dragover');
+            });
+            
+            uploadArea.addEventListener('dragleave', (e) => {
+                e.preventDefault();
+                uploadArea.classList.remove('dragover');
+            });
+            
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadArea.classList.remove('dragover');
+                
+                if (e.dataTransfer.files.length > 0) {
+                    handleFiles(e.dataTransfer.files);
+                }
+            });
+        });
+        
+        function handleFileUpload(e) {
+            if (e.target.files.length > 0) {
+                handleFiles(e.target.files);
+            }
+        }
+        
+        async function handleFiles(files) {
+            if (files.length === 0) return;
+            
+            const uploadProgress = document.getElementById('uploadProgress');
+            const progressBar = document.getElementById('progressBar');
+            const progressText = document.getElementById('progressText');
+            
+            uploadProgress.style.display = 'block';
+            
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('path', currentPath);
+                
+                try {
+                    const response = await fetch('/api/files/upload', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        const percent = Math.round(((i + 1) / files.length) * 100);
+                        progressBar.style.width = percent + '%';
+                        progressText.textContent = `${percent}%`;
+                        
+                        if (i === files.length - 1) {
+                            showNotification('文件上传成功', 'success');
+                            closeModal('uploadModal');
+                            refreshCurrent();
+                            uploadProgress.style.display = 'none';
+                        }
+                    } else {
+                        showNotification(`文件 ${file.name} 上传失败: ${result.message}`, 'error');
+                    }
+                } catch (error) {
+                    showNotification(`文件 ${file.name} 上传失败: ${error.message}`, 'error');
+                }
+            }
+        }
+        
+        // 键盘快捷键
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Delete' || e.key === 'Backspace') {
+                if (selectedItems.size > 0) {
+                    deleteSelected();
+                }
+            } else if (e.key === 'F5' || (e.ctrlKey && e.key === 'r')) {
+                e.preventDefault();
+                refreshCurrent();
+            } else if (e.key === 'Escape') {
+                // 关闭所有模态框
+                document.querySelectorAll('.modal').forEach(modal => {
+                    modal.style.display = 'none';
+                });
+            }
+        });
+    </script>
+</body>
+</html>
