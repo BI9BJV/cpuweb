@@ -183,6 +183,15 @@ python app.py
 - 日志文件: `service.log`
 - 使用管理脚本查看日志: `./manage_service.sh logs`
 
+## 系统集成
+
+### 与温度管控程序集成
+本系统与树莓派温度控制风扇系统深度集成：
+- 温度管控程序可通过API端点 `http://localhost:9001/api/fan/control_event` 控制风扇状态
+- CPUWeb提供实时风扇状态监控界面
+- 两个程序协同工作实现智能温控管理
+- 支持外部程序监控和控制风扇状态
+
 ## 维护与扩展
 
 ### 日志管理
